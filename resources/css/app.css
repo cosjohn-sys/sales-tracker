@@ -2,17 +2,24 @@
     box-sizing: border-box;
 }
 
+html {
+    width: 100%;
+    overflow-x: hidden;
+}
+
 body {
     margin: 0;
     background: #f4f6f8;
     color: #1f2933;
     font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    overflow-x: hidden;
 }
 
 button,
 input,
 select {
     font: inherit;
+    max-width: 100%;
 }
 
 button {
@@ -20,25 +27,51 @@ button {
 }
 
 .app-shell {
+    --sidebar-width: clamp(232px, 18vw, 264px);
+    --mobile-sidebar-width: min(86vw, 320px);
     display: grid;
-    grid-template-columns: 248px minmax(0, 1fr);
+    grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+    width: 100%;
     min-height: 100vh;
+    overflow-x: clip;
+    position: relative;
+    transition: grid-template-columns 180ms ease;
+}
+
+.app-shell.sidebar-collapsed {
+    --sidebar-width: 76px;
 }
 
 .sidebar {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    min-width: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
     background: #ffffff;
     border-right: 1px solid #d9e0e7;
     padding: 20px;
+    transition: padding 180ms ease, transform 220ms ease;
+}
+
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 24px;
 }
 
 .brand-block {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 24px;
+    min-width: 0;
 }
 
 .brand-mark {
+    flex: 0 0 42px;
     display: grid;
     width: 42px;
     height: 42px;
@@ -47,6 +80,15 @@ button {
     background: #0f766e;
     color: #ffffff;
     font-weight: 800;
+}
+
+.brand-copy {
+    max-width: 150px;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    opacity: 1;
+    transition: max-width 180ms ease, opacity 120ms ease;
 }
 
 .brand-block h1,
@@ -59,6 +101,35 @@ button {
 
 .brand-block h1 {
     font-size: 20px;
+}
+
+.sidebar-toggle {
+    display: grid;
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border: 1px solid #d9e0e7;
+    border-radius: 8px;
+    background: #f7fafc;
+    color: #344054;
+    font-weight: 800;
+    line-height: 1;
+    transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+}
+
+.sidebar-toggle:hover,
+.sidebar-toggle:focus-visible {
+    border-color: #a7d8d2;
+    background: #ecfdf9;
+    color: #0f766e;
+    outline: none;
+}
+
+.mobile-menu-button,
+.mobile-sidebar-close,
+.sidebar-backdrop {
+    display: none;
 }
 
 .brand-block p,
@@ -87,10 +158,13 @@ label {
     border-radius: 8px;
     background: transparent;
     color: #344054;
+    overflow: hidden;
     text-align: left;
+    transition: border-color 160ms ease, background 160ms ease, color 160ms ease, gap 180ms ease, padding 180ms ease;
 }
 
-.tab-button span {
+.tab-icon {
+    flex: 0 0 22px;
     display: grid;
     width: 22px;
     height: 22px;
@@ -101,11 +175,52 @@ label {
     font-weight: 700;
 }
 
+.tab-label {
+    max-width: 150px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    opacity: 1;
+    transition: max-width 180ms ease, opacity 120ms ease;
+}
+
 .tab-button.active {
     border-color: #a7d8d2;
     background: #ecfdf9;
     color: #0f766e;
     font-weight: 700;
+}
+
+.app-shell.sidebar-collapsed .sidebar {
+    padding: 20px 14px;
+}
+
+.app-shell.sidebar-collapsed .sidebar-header {
+    flex-direction: column;
+    gap: 12px;
+}
+
+.app-shell.sidebar-collapsed .brand-block {
+    gap: 0;
+    justify-content: center;
+}
+
+.app-shell.sidebar-collapsed .brand-copy,
+.app-shell.sidebar-collapsed .tab-label {
+    max-width: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.app-shell.sidebar-collapsed .tab-list {
+    gap: 10px;
+}
+
+.app-shell.sidebar-collapsed .tab-button {
+    justify-content: center;
+    gap: 0;
+    padding: 10px;
 }
 
 .workspace {
@@ -119,21 +234,44 @@ label {
     justify-content: space-between;
     gap: 16px;
     margin-bottom: 18px;
+    min-width: 0;
+}
+
+.topbar-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.topbar-copy {
+    min-width: 0;
 }
 
 .topbar-actions {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     gap: 10px;
+    min-width: 0;
+    flex-wrap: wrap;
 }
 
 .topbar h2 {
     font-size: 28px;
+    overflow-wrap: anywhere;
 }
 
 .page-grid {
     display: grid;
     gap: 18px;
+    min-width: 0;
+}
+
+.page-grid > *,
+.summary-grid > *,
+.two-column > * {
+    min-width: 0;
 }
 
 .summary-grid {
@@ -144,6 +282,7 @@ label {
 
 .metric-card,
 .panel {
+    min-width: 0;
     border: 1px solid #d9e0e7;
     border-radius: 8px;
     background: #ffffff;
@@ -160,6 +299,7 @@ label {
     color: #111827;
     font-size: 26px;
     line-height: 1.1;
+    overflow-wrap: anywhere;
 }
 
 .metric-card.strong {
@@ -181,6 +321,7 @@ label {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;
     gap: 12px;
     margin-bottom: 14px;
 }
@@ -209,6 +350,12 @@ label {
 .stock-row div {
     display: grid;
     gap: 3px;
+    min-width: 0;
+}
+
+.stock-row strong,
+.low-stock-box span {
+    overflow-wrap: anywhere;
 }
 
 .stock-pill {
@@ -268,6 +415,7 @@ label {
 input,
 select {
     width: 100%;
+    min-width: 0;
     min-height: 40px;
     border: 1px solid #cbd5e1;
     border-radius: 8px;
@@ -293,6 +441,7 @@ select:focus {
     grid-template-columns: minmax(170px, 1fr) 88px 100px 112px 40px;
     align-items: center;
     gap: 8px;
+    min-width: 0;
 }
 
 .line-item.heading {
@@ -328,11 +477,13 @@ select:focus {
 }
 
 .btn {
+    max-width: 100%;
     min-height: 40px;
     border: 1px solid transparent;
     border-radius: 8px;
     padding: 9px 14px;
     font-weight: 800;
+    white-space: nowrap;
 }
 
 .btn-primary {
@@ -376,8 +527,11 @@ select:focus {
 }
 
 .table-wrap {
+    min-width: 0;
+    max-width: 100%;
     width: 100%;
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 table {
@@ -407,6 +561,7 @@ th {
 
 .row-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
 }
 
@@ -600,6 +755,7 @@ th {
 .user-pill {
     display: inline-flex;
     align-items: center;
+    max-width: 100%;
     min-height: 34px;
     padding: 6px 10px;
     border-radius: 8px;
@@ -607,6 +763,9 @@ th {
     color: #344054;
     font-size: 13px;
     font-weight: 800;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 @media (max-width: 1100px) {
@@ -636,45 +795,201 @@ th {
 
 @media (max-width: 820px) {
     .app-shell {
-        grid-template-columns: 1fr;
+        display: block;
+        grid-template-columns: none;
+        min-height: 100vh;
+        overflow-x: hidden;
+    }
+
+    .sidebar-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 20;
+        display: block;
+        width: 100%;
+        border: 0;
+        border-radius: 0;
+        padding: 0;
+        background: rgba(15, 23, 42, 0.42);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 220ms ease;
+    }
+
+    .app-shell.mobile-sidebar-open .sidebar-backdrop {
+        opacity: 1;
+        pointer-events: auto;
     }
 
     .sidebar {
-        border-right: 0;
-        border-bottom: 1px solid #d9e0e7;
+        position: fixed;
+        inset: 0 auto 0 0;
+        z-index: 30;
+        width: var(--mobile-sidebar-width);
+        max-width: calc(100vw - 24px);
+        height: 100dvh;
+        padding: 16px;
+        border-right: 1px solid #d9e0e7;
+        border-bottom: 0;
+        box-shadow: 18px 0 40px rgba(15, 23, 42, 0.16);
+        transform: translateX(-100%);
+    }
+
+    .app-shell.mobile-sidebar-open .sidebar {
+        transform: translateX(0);
+    }
+
+    .desktop-sidebar-toggle {
+        display: none;
+    }
+
+    .mobile-sidebar-close {
+        display: grid;
+    }
+
+    .mobile-menu-button {
+        display: inline-grid;
+        flex: 0 0 40px;
+        width: 40px;
+        height: 40px;
+        align-content: center;
+        justify-items: center;
+        gap: 4px;
+        border: 1px solid #d9e0e7;
+        border-radius: 8px;
+        background: #ffffff;
+    }
+
+    .mobile-menu-button span {
+        display: block;
+        width: 18px;
+        height: 2px;
+        border-radius: 999px;
+        background: #344054;
+    }
+
+    .mobile-menu-button:hover,
+    .mobile-menu-button:focus-visible {
+        border-color: #a7d8d2;
+        background: #ecfdf9;
+        outline: none;
+    }
+
+    .sidebar-header {
+        margin-bottom: 16px;
     }
 
     .tab-list {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: 1fr;
+    }
+
+    .app-shell.sidebar-collapsed .sidebar {
+        padding: 16px;
+    }
+
+    .app-shell.sidebar-collapsed .sidebar-header {
+        flex-direction: row;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 16px;
+    }
+
+    .app-shell.sidebar-collapsed .brand-block {
+        gap: 12px;
+        justify-content: flex-start;
+    }
+
+    .app-shell.sidebar-collapsed .brand-copy,
+    .app-shell.sidebar-collapsed .tab-label {
+        max-width: 150px;
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .app-shell.sidebar-collapsed .tab-list {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .app-shell.sidebar-collapsed .tab-button {
+        justify-content: flex-start;
+        gap: 10px;
+        min-height: 42px;
+        padding: 10px 12px;
     }
 
     .workspace {
+        width: 100%;
         padding: 16px;
     }
 
     .topbar {
-        align-items: flex-start;
+        align-items: stretch;
         flex-direction: column;
+        gap: 12px;
+    }
+
+    .topbar-title {
+        width: 100%;
     }
 
     .topbar-actions {
         width: 100%;
-        flex-wrap: wrap;
+        justify-content: flex-start;
     }
 
-    .summary-grid,
+    .summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .two-column,
     .form-grid,
     .payment-grid {
         grid-template-columns: 1fr;
     }
 
+    .product-form,
+    .history-filters {
+        grid-template-columns: 1fr;
+    }
+
     .line-item {
-        grid-template-columns: minmax(0, 1fr) 74px;
+        grid-template-areas:
+            "product qty remove"
+            "price total total";
+        grid-template-columns: minmax(0, 1fr) 76px 40px;
+        align-items: end;
+        padding: 10px;
+        border: 1px solid #e5eaf0;
+        border-radius: 8px;
+        background: #ffffff;
     }
 
     .line-item.heading {
         display: none;
+    }
+
+    .line-item select {
+        grid-area: product;
+    }
+
+    .line-item input {
+        grid-area: qty;
+    }
+
+    .line-item > span {
+        grid-area: price;
+    }
+
+    .line-item > strong {
+        grid-area: total;
+        justify-self: end;
+        text-align: right;
+        overflow-wrap: anywhere;
+    }
+
+    .line-item > .icon-btn {
+        grid-area: remove;
     }
 
     .login-landing {
@@ -693,5 +1008,72 @@ th {
     .login-form-panel {
         width: calc(100% - 32px);
         padding: 22px;
+    }
+}
+
+@media (max-width: 560px) {
+    .workspace {
+        padding: 12px;
+    }
+
+    .topbar h2 {
+        font-size: 24px;
+    }
+
+    .topbar-actions .btn {
+        flex: 1 1 118px;
+    }
+
+    .user-pill {
+        flex: 1 1 100%;
+    }
+
+    .summary-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .metric-card {
+        min-height: auto;
+        padding: 14px;
+    }
+
+    .metric-card strong {
+        font-size: 22px;
+    }
+
+    .panel {
+        padding: 14px;
+    }
+
+    .panel-heading h3 {
+        font-size: 16px;
+    }
+
+    .line-item {
+        grid-template-columns: minmax(0, 1fr) 70px 38px;
+        padding: 8px;
+    }
+
+    .icon-btn {
+        width: 36px;
+        height: 36px;
+    }
+
+    .change-box strong {
+        font-size: 21px;
+    }
+
+    th,
+    td {
+        padding: 8px;
+    }
+
+    table {
+        min-width: 640px;
+    }
+
+    .compact table {
+        min-width: 420px;
     }
 }

@@ -1,12 +1,42 @@
 <template>
-    <div class="app-shell">
-        <aside class="sidebar">
-            <div class="brand-block">
-                <div class="brand-mark">RFC</div>
-                <div>
-                    <h1>Store</h1>
-                    <p>Sales and stock</p>
+    <div :class="['app-shell', { 'sidebar-collapsed': sidebarCollapsed, 'mobile-sidebar-open': mobileSidebarOpen }]">
+        <button
+            class="sidebar-backdrop"
+            type="button"
+            aria-label="Close sidebar"
+            @click="closeMobileSidebar"
+        ></button>
+
+        <aside id="app-sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <div class="brand-block">
+                    <div class="brand-mark">RFC</div>
+                    <div class="brand-copy">
+                        <h1>Store</h1>
+                        <p>Sales and stock</p>
+                    </div>
                 </div>
+
+                <button
+                    class="sidebar-toggle desktop-sidebar-toggle"
+                    type="button"
+                    :aria-expanded="!sidebarCollapsed"
+                    :aria-label="sidebarToggleLabel"
+                    :title="sidebarToggleLabel"
+                    @click="toggleSidebar"
+                >
+                    <span aria-hidden="true">{{ sidebarCollapsed ? '>' : '<' }}</span>
+                </button>
+
+                <button
+                    class="sidebar-toggle mobile-sidebar-close"
+                    type="button"
+                    aria-label="Close sidebar"
+                    title="Close sidebar"
+                    @click="closeMobileSidebar"
+                >
+                    <span aria-hidden="true">X</span>
+                </button>
             </div>
 
             <nav class="tab-list" aria-label="Main">
@@ -15,19 +45,35 @@
                     :key="tab.id"
                     type="button"
                     :class="['tab-button', { active: activeTab === tab.id }]"
-                    @click="activeTab = tab.id"
+                    :title="sidebarCollapsed ? tab.label : null"
+                    @click="selectTab(tab.id)"
                 >
-                    <span>{{ tab.icon }}</span>
-                    {{ tab.label }}
+                    <span class="tab-icon" aria-hidden="true">{{ tab.icon }}</span>
+                    <span class="tab-label">{{ tab.label }}</span>
                 </button>
             </nav>
         </aside>
 
         <main class="workspace">
             <header class="topbar">
-                <div>
-                    <p class="eyebrow">RFC Store System</p>
-                    <h2>{{ currentTitle }}</h2>
+                <div class="topbar-title">
+                    <button
+                        class="mobile-menu-button"
+                        type="button"
+                        aria-label="Open sidebar"
+                        title="Open sidebar"
+                        aria-controls="app-sidebar"
+                        :aria-expanded="mobileSidebarOpen"
+                        @click="openMobileSidebar"
+                    >
+                        <span aria-hidden="true"></span>
+                        <span aria-hidden="true"></span>
+                        <span aria-hidden="true"></span>
+                    </button>
+                    <div class="topbar-copy">
+                        <p class="eyebrow">RFC Store System</p>
+                        <h2>{{ currentTitle }}</h2>
+                    </div>
                 </div>
                 <div class="topbar-actions">
                     <button class="btn btn-primary" type="button" @click="refreshAll" :disabled="loading">
@@ -612,6 +658,8 @@ export default {
     data() {
         return {
             activeTab: 'dashboard',
+            sidebarCollapsed: false,
+            mobileSidebarOpen: false,
             loading: false,
             savingSale: false,
             notice: {
@@ -619,13 +667,13 @@ export default {
                 text: '',
             },
             tabs: [
-                { id: 'dashboard', label: 'Dashboard', icon: '#' },
-                { id: 'sales', label: 'New Sale', icon: '+' },
-                { id: 'products', label: 'Products', icon: '$' },
-                { id: 'customers', label: 'Customers', icon: '@' },
-                { id: 'inventory', label: 'Inventory', icon: '=' },
-                { id: 'reports', label: 'Reports', icon: '%' },
-                { id: 'history', label: 'History', icon: '?' },
+                { id: 'dashboard', label: 'Dashboard', icon: '1' },
+                { id: 'sales', label: 'New Sale', icon: '2' },
+                { id: 'products', label: 'Products', icon: '3' },
+                { id: 'customers', label: 'Customers', icon: '4' },
+                { id: 'inventory', label: 'Inventory', icon: '5' },
+                { id: 'reports', label: 'Reports', icon: '6' },
+                { id: 'history', label: 'History', icon: '7' },
             ],
             dashboard: this.emptyDashboard(),
             products: [],
@@ -663,6 +711,9 @@ export default {
             const tab = this.tabs.find((item) => item.id === this.activeTab);
             return tab ? tab.label : 'Dashboard';
         },
+        sidebarToggleLabel() {
+            return this.sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar';
+        },
         activeProducts() {
             return this.products.filter((product) => product.status === 'Active');
         },
@@ -679,6 +730,12 @@ export default {
     },
     created() {
         this.refreshAll();
+    },
+    mounted() {
+        window.addEventListener('keydown', this.handleShellKeydown);
+    },
+    beforeUnmount() {
+        window.removeEventListener('keydown', this.handleShellKeydown);
     },
     methods: {
         emptyDashboard() {
@@ -723,6 +780,24 @@ export default {
                 minimum_stock: 0,
                 status: 'Active',
             };
+        },
+        toggleSidebar() {
+            this.sidebarCollapsed = !this.sidebarCollapsed;
+        },
+        openMobileSidebar() {
+            this.mobileSidebarOpen = true;
+        },
+        closeMobileSidebar() {
+            this.mobileSidebarOpen = false;
+        },
+        selectTab(tabId) {
+            this.activeTab = tabId;
+            this.closeMobileSidebar();
+        },
+        handleShellKeydown(event) {
+            if (event.key === 'Escape') {
+                this.closeMobileSidebar();
+            }
         },
         async refreshAll() {
             this.loading = true;
