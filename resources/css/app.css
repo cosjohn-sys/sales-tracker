@@ -1077,3 +1077,136 @@ th {
         min-width: 420px;
     }
 }
+
+.credit-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+    padding: 14px;
+    border: 1px solid #d9e0e7;
+    border-radius: 8px;
+    background: #f8fafc;
+}
+
+.credit-summary > div {
+    display: grid;
+    gap: 4px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.credit-summary span {
+    color: #627083;
+    font-size: 13px;
+}
+
+.credit-summary strong {
+    font-size: 20px;
+}
+
+.credit-summary .balance-highlight {
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+}
+
+.credit-summary .balance-highlight strong {
+    color: #9a3412;
+}
+
+.warn-text {
+    grid-column: 1 / -1;
+    margin: 0;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #fef3c7;
+    color: #92400e;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.status-pill.ok {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.status-pill.warn {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.status-pill.low {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.text-danger {
+    color: #991b1b;
+}
+
+.text-ok {
+    color: #166534;
+}
+
+.clickable-row {
+    cursor: pointer;
+    transition: background-color 150ms ease;
+}
+
+.clickable-row:hover {
+    background: #f0fdfa;
+}
+
+.clickable-row.selected {
+    background: #ccfbf1;
+}
+
+.empty-row {
+    text-align: center;
+    padding: 20px;
+    color: #627083;
+    font-style: italic;
+}
+
+.sub-heading {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid #e5eaf0;
+}
+
+.sub-heading h4 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.actions.span-full {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.compact-stats div.balance-highlight {
+    background: #fff7ed;
+}
+
+.compact-stats div.balance-highlight strong {
+    color: #9a3412;
+}
+
+@media (max-width: 820px) {
+    .credit-summary {
+        grid-template-columns: 1fr;
+    }
+}

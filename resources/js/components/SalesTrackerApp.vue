@@ -239,7 +239,7 @@
                             <select v-model="saleForm.payment_method" @change="syncPaymentAmount">
                                 <option>Cash</option>
                                 <option>GCash</option>
-                                <option>Credit</option>
+                                <option value="Credit">Credit / Utang</option>
                             </select>
                         </label>
                         <label>
@@ -247,13 +247,37 @@
                             <input v-model.number="saleForm.amount_paid" type="number" min="0" step="0.01">
                         </label>
                         <div class="change-box">
-                            <span>Change</span>
-                            <strong>{{ money(changeAmount) }}</strong>
+                            <span v-if="saleForm.payment_method === 'Cash'">Change</span>
+                            <span v-else-if="saleForm.payment_method === 'Credit'">Remaining Balance</span>
+                            <span v-else>Amount Paid</span>
+                            <strong>{{ saleForm.payment_method === 'Credit' ? money(creditSaleBalance) : money(changeAmount) }}</strong>
                         </div>
                     </div>
 
+                    <div v-if="saleForm.payment_method === 'Credit'" class="credit-summary">
+                        <div>
+                            <span>Total Amount</span>
+                            <strong>{{ money(saleTotal) }}</strong>
+                        </div>
+                        <div>
+                            <span>Amount Paid</span>
+                            <strong>{{ money(Number(saleForm.amount_paid || 0)) }}</strong>
+                        </div>
+                        <div class="balance-highlight">
+                            <span>Remaining Balance (Utang)</span>
+                            <strong>{{ money(creditSaleBalance) }}</strong>
+                        </div>
+                        <p v-if="creditSaleNeedsCustomer" class="warn-text">
+                            Credit/Utang payment requires a customer name. Please select or enter a customer.
+                        </p>
+                    </div>
+
                     <div class="actions">
-                        <button class="btn btn-primary" type="submit" :disabled="savingSale">
+                        <button
+                            class="btn btn-primary"
+                            type="submit"
+                            :disabled="savingSale || creditSaleNeedsCustomer"
+                        >
                             Save Sale
                         </button>
                     </div>
@@ -641,6 +665,219 @@
                     </div>
                 </section>
             </section>
+
+            <section v-if="activeTab === 'credit'" class="page-grid">
+                <section class="panel">
+                    <div class="panel-heading">
+                        <h3>Customer Credit Summary</h3>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Customer</th>
+                                    <th>Total Credit</th>
+                                    <th>Total Payments</th>
+                                    <th>Remaining Balance</th>
+                                    <th>Last Payment Date</th>
+                                    <th>Status</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-if="creditDashboard.length === 0">
+                                    <td colspan="7" class="empty-row">No credit transactions recorded yet.</td>
+                                </tr>
+                                <tr
+                                    v-for="row in creditDashboard"
+                                    :key="row.customer_id"
+                                    :class="['clickable-row', { selected: customerCreditDetail && customerCreditDetail.customer.id === row.customer_id }]"
+                                    @click="openCustomerCreditDetail(row.customer_id)"
+                                >
+                                    <td><strong>{{ row.name }}</strong></td>
+                                    <td>{{ money(row.total_credit) }}</td>
+                                    <td>{{ money(row.total_payments) }}</td>
+                                    <td>
+                                        <span :class="row.remaining_balance > 0 ? 'text-danger' : 'text-ok'">
+                                            <strong>{{ money(row.remaining_balance) }}</strong>
+                                        </span>
+                                    </td>
+                                    <td>{{ dateTime(row.last_payment_date) }}</td>
+                                    <td>
+                                        <span :class="['status-pill', creditStatusClass(row.payment_status)]">
+                                            {{ row.payment_status }}
+                                        </span>
+                                    </td>
+                                    <td class="row-actions">
+                                        <button
+                                            class="btn btn-small btn-primary"
+                                            type="button"
+                                            @click.stop="prefillCustomerForPayment(row.customer_id)"
+                                            :disabled="row.remaining_balance <= 0"
+                                        >
+                                            Pay Credit
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section v-if="customerCreditDetail" class="panel">
+                    <div class="panel-heading">
+                        <h3>Customer Detail: {{ customerCreditDetail.customer.name }}</h3>
+                        <button class="btn btn-small btn-muted" type="button" @click="closeCustomerCreditDetail">Close</button>
+                    </div>
+
+                    <div class="compact-stats">
+                        <div>
+                            <span>Total Credit (Utang)</span>
+                            <strong>{{ money(customerCreditDetail.summary.total_credit) }}</strong>
+                        </div>
+                        <div>
+                            <span>Total Payments Made</span>
+                            <strong>{{ money(customerCreditDetail.summary.total_payments) }}</strong>
+                        </div>
+                        <div class="balance-highlight">
+                            <span>Remaining Balance</span>
+                            <strong :class="customerCreditDetail.summary.remaining_balance > 0 ? 'text-danger' : 'text-ok'">
+                                {{ money(customerCreditDetail.summary.remaining_balance) }}
+                            </strong>
+                        </div>
+                        <div>
+                            <span>Last Payment Date</span>
+                            <strong>{{ dateTime(customerCreditDetail.summary.last_payment_date) }}</strong>
+                        </div>
+                    </div>
+
+                    <div class="panel-heading sub-heading">
+                        <h4>Credit Transactions</h4>
+                    </div>
+                    <div class="table-wrap compact">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Transaction #</th>
+                                    <th>Date</th>
+                                    <th>Original Total</th>
+                                    <th>Initial Payment</th>
+                                    <th>Subsequent Payments</th>
+                                    <th>Balance</th>
+                                    <th>Status</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="txn in customerCreditDetail.credit_transactions" :key="txn.id">
+                                    <td>{{ txn.transaction_number }}</td>
+                                    <td>{{ dateTime(txn.sale_date) }}</td>
+                                    <td>{{ money(txn.original_total) }}</td>
+                                    <td>{{ money(txn.initial_payment) }}</td>
+                                    <td>{{ money(txn.total_subsequent_payments) }}</td>
+                                    <td>
+                                        <span :class="txn.balance > 0 ? 'text-danger' : 'text-ok'">
+                                            <strong>{{ money(txn.balance) }}</strong>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span :class="['status-pill', creditStatusClass(txn.payment_status)]">
+                                            {{ txn.payment_status }}
+                                        </span>
+                                    </td>
+                                    <td class="row-actions">
+                                        <button
+                                            class="btn btn-small btn-primary"
+                                            type="button"
+                                            @click="prefillTransactionForPayment(txn)"
+                                            :disabled="txn.balance <= 0"
+                                        >
+                                            Pay This
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="panel-heading sub-heading">
+                        <h4>Payment History</h4>
+                    </div>
+                    <div class="table-wrap compact">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Amount</th>
+                                    <th>Linked Transaction</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-if="customerCreditDetail.payments.length === 0">
+                                    <td colspan="4" class="empty-row">No subsequent payments yet.</td>
+                                </tr>
+                                <tr v-for="p in customerCreditDetail.payments" :key="p.id">
+                                    <td>{{ dateTime(p.payment_date) }}</td>
+                                    <td><strong>{{ money(p.amount_paid) }}</strong></td>
+                                    <td>{{ p.transaction_number || 'Initial (at sale)' }}</td>
+                                    <td>{{ p.notes || '—' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="panel">
+                    <div class="panel-heading">
+                        <h3>Record Credit Payment (Pay Utang)</h3>
+                    </div>
+                    <form class="form-grid" @submit.prevent="saveCreditPayment">
+                        <label>
+                            Customer
+                            <select v-model.number="creditPaymentForm.customer_id" required>
+                                <option disabled value="">Select customer with outstanding balance</option>
+                                <option
+                                    v-for="row in creditCustomersWithBalance"
+                                    :key="row.customer_id"
+                                    :value="row.customer_id"
+                                >
+                                    {{ row.name }} - Balance: {{ money(row.remaining_balance) }}
+                                </option>
+                            </select>
+                        </label>
+                        <label v-if="creditPaymentForm.customer_id && unpaidTxnsForPaymentCustomer.length > 0">
+                            Apply to Specific Transaction (Optional)
+                            <select v-model.number="creditPaymentForm.credit_transaction_id">
+                                <option value="">Apply to oldest first (FIFO)</option>
+                                <option
+                                    v-for="txn in unpaidTxnsForPaymentCustomer"
+                                    :key="txn.id"
+                                    :value="txn.id"
+                                >
+                                    {{ txn.transaction_number }} - {{ money(txn.balance) }} remaining
+                                </option>
+                            </select>
+                        </label>
+                        <label>
+                            Amount Paid
+                            <input v-model.number="creditPaymentForm.amount_paid" type="number" min="0.01" step="0.01" required>
+                        </label>
+                        <label>
+                            Notes (Optional)
+                            <input v-model="creditPaymentForm.notes" type="text" placeholder="e.g. Partial payment">
+                        </label>
+                        <div class="actions span-full">
+                            <button class="btn btn-primary" type="submit" :disabled="savingCreditPayment || !creditPaymentForm.customer_id || creditPaymentForm.amount_paid <= 0">
+                                Record Payment
+                            </button>
+                            <button v-if="creditPaymentForm.customer_id || creditPaymentForm.amount_paid > 0" class="btn btn-muted" type="button" @click="resetCreditPaymentForm">
+                                Clear
+                            </button>
+                        </div>
+                    </form>
+                </section>
+            </section>
         </main>
     </div>
 </template>
@@ -671,6 +908,7 @@ export default {
                 { id: 'sales', label: 'New Sale', icon: '2' },
                 { id: 'products', label: 'Products', icon: '3' },
                 { id: 'customers', label: 'Customers', icon: '4' },
+                { id: 'credit', label: 'Credit / Utang', icon: '$' },
                 { id: 'inventory', label: 'Inventory', icon: '5' },
                 { id: 'reports', label: 'Reports', icon: '6' },
                 { id: 'history', label: 'History', icon: '7' },
@@ -683,6 +921,9 @@ export default {
             trends: {},
             inventoryReport: [],
             salesHistory: [],
+            creditDashboard: [],
+            customerCreditDetail: null,
+            savingCreditPayment: false,
             saleForm: this.emptySaleForm(),
             productForm: this.emptyProductForm(),
             productEditForm: this.emptyProductForm(),
@@ -690,6 +931,12 @@ export default {
             customerForm: {
                 name: '',
                 customer_type: 'Regular Customer',
+            },
+            creditPaymentForm: {
+                customer_id: '',
+                credit_transaction_id: '',
+                amount_paid: 0,
+                notes: '',
             },
             stockForm: {
                 product_id: '',
@@ -719,6 +966,35 @@ export default {
         },
         saleTotal() {
             return this.saleForm.items.reduce((total, item) => total + this.itemTotal(item), 0);
+        },
+        creditSaleBalance() {
+            if (this.saleForm.payment_method !== 'Credit') {
+                return 0;
+            }
+            return Math.max(0, this.saleTotal - Number(this.saleForm.amount_paid || 0));
+        },
+        creditSaleNeedsCustomer() {
+            return this.saleForm.payment_method === 'Credit'
+                && !this.saleForm.customer_id
+                && !String(this.saleForm.customer_name || '').trim();
+        },
+        creditCustomersWithBalance() {
+            return this.creditDashboard.filter((row) => Number(row.remaining_balance) > 0.0001);
+        },
+        unpaidTxnsForPaymentCustomer() {
+            if (!this.creditPaymentForm.customer_id || !this.customerCreditDetail) {
+                if (this.creditPaymentForm.customer_id) {
+                    const hit = this.creditDashboard.find((r) => Number(r.customer_id) === Number(this.creditPaymentForm.customer_id));
+                    if (hit && this._customerTxnCache && this._customerTxnCache.customerId === Number(this.creditPaymentForm.customer_id)) {
+                        return this._customerTxnCache.txns;
+                    }
+                }
+                return [];
+            }
+            if (Number(this.customerCreditDetail.customer.id) !== Number(this.creditPaymentForm.customer_id)) {
+                return [];
+            }
+            return this.customerCreditDetail.credit_transactions.filter((txn) => Number(txn.balance) > 0.0001);
         },
         changeAmount() {
             if (this.saleForm.payment_method !== 'Cash') {
@@ -810,9 +1086,101 @@ export default {
                     this.loadReports(),
                     this.loadInventoryReport(),
                     this.loadSalesHistory(),
+                    this.loadCreditDashboard(),
                 ]);
             } finally {
                 this.loading = false;
+            }
+        },
+        async loadCreditDashboard() {
+            try {
+                const response = await window.axios.get('/api/credit-dashboard');
+                this.creditDashboard = response.data.data || [];
+            } catch (err) {
+                this.creditDashboard = [];
+            }
+        },
+        async openCustomerCreditDetail(customerId) {
+            if (this.customerCreditDetail && Number(this.customerCreditDetail.customer.id) === Number(customerId)) {
+                this.closeCustomerCreditDetail();
+                return;
+            }
+            try {
+                const response = await window.axios.get(`/api/customers/${customerId}/credit-summary`);
+                this.customerCreditDetail = response.data.data;
+                this._customerTxnCache = {
+                    customerId: Number(customerId),
+                    txns: (response.data.data.credit_transactions || []).filter((t) => Number(t.balance) > 0.0001),
+                };
+            } catch (err) {
+                this.showError(err);
+            }
+        },
+        closeCustomerCreditDetail() {
+            this.customerCreditDetail = null;
+            this._customerTxnCache = null;
+        },
+        prefillCustomerForPayment(customerId) {
+            this.creditPaymentForm.customer_id = customerId;
+            this.creditPaymentForm.credit_transaction_id = '';
+            const row = this.creditDashboard.find((r) => Number(r.customer_id) === Number(customerId));
+            this.creditPaymentForm.amount_paid = row ? Number(row.remaining_balance) : 0;
+            this.creditPaymentForm.notes = '';
+
+            if (!this.customerCreditDetail || Number(this.customerCreditDetail.customer.id) !== Number(customerId)) {
+                this.openCustomerCreditDetail(customerId);
+            }
+        },
+        prefillTransactionForPayment(txn) {
+            this.creditPaymentForm.customer_id = this.customerCreditDetail
+                ? Number(this.customerCreditDetail.customer.id)
+                : this.creditPaymentForm.customer_id;
+            this.creditPaymentForm.credit_transaction_id = Number(txn.id);
+            this.creditPaymentForm.amount_paid = Number(txn.balance);
+            this.creditPaymentForm.notes = '';
+        },
+        resetCreditPaymentForm() {
+            this.creditPaymentForm = {
+                customer_id: '',
+                credit_transaction_id: '',
+                amount_paid: 0,
+                notes: '',
+            };
+        },
+        async saveCreditPayment() {
+            this.savingCreditPayment = true;
+            try {
+                const payload = {
+                    customer_id: this.creditPaymentForm.customer_id,
+                    credit_transaction_id: this.creditPaymentForm.credit_transaction_id || null,
+                    amount_paid: Number(this.creditPaymentForm.amount_paid),
+                    notes: this.creditPaymentForm.notes || null,
+                };
+                await window.axios.post('/api/credit-payments', payload);
+                this.showNotice('Credit payment recorded successfully.');
+                this.resetCreditPaymentForm();
+                await this.loadCreditDashboard();
+                if (this.customerCreditDetail) {
+                    await this.openCustomerCreditDetail(this.customerCreditDetail.customer.id);
+                }
+                await this.loadCustomers();
+            } catch (err) {
+                this.showError(err);
+            } finally {
+                this.savingCreditPayment = false;
+            }
+        },
+        creditStatusClass(status) {
+            switch (status) {
+                case 'Paid':
+                case 'Fully Settled':
+                    return 'ok';
+                case 'Partially Paid':
+                    return 'warn';
+                case 'Unpaid/Credit':
+                    return 'low';
+                default:
+                    return '';
             }
         },
         async loadProducts() {
@@ -978,18 +1346,14 @@ export default {
             if (this.saleForm.payment_method === 'GCash') {
                 this.saleForm.amount_paid = this.saleTotal;
             }
-
-            if (this.saleForm.payment_method === 'Credit') {
-                this.saleForm.amount_paid = 0;
-            }
         },
         paymentAmountForPayload() {
-            if (this.saleForm.payment_method === 'Credit') {
-                return 0;
-            }
-
             if (this.saleForm.payment_method === 'GCash') {
                 return this.saleTotal;
+            }
+
+            if (this.saleForm.payment_method === 'Credit') {
+                return Number(this.saleForm.amount_paid || 0);
             }
 
             return this.saleForm.amount_paid;

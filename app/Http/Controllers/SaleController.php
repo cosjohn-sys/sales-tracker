@@ -95,15 +95,21 @@ class SaleController extends Controller
                 $timestamp = Carbon::now();
                 $saleDate = $timestamp->toDateTimeString();
                 $inventoryDate = $timestamp->toDateString();
+                $paymentMethod = $request->input('payment_method');
                 $customerData = $this->resolveCustomer(
                     $request->input('customer_id'),
                     $request->input('customer_name'),
                     $request->input('customer_type'),
                     $timestamp
                 );
+
+                if ($paymentMethod === 'Credit' && $customerData['customer_id'] === null) {
+                    throw new InvalidArgumentException('Credit/Utang payment requires a registered customer. Select or enter a customer name.');
+                }
+
                 $items = $this->prepareSaleItems($request->input('items'), $timestamp, $inventoryDate);
                 $totalAmount = array_sum(array_column($items, 'total'));
-                $payment = $this->preparePayment($request->input('payment_method'), $request->input('amount_paid'), $totalAmount);
+                $payment = $this->preparePayment($paymentMethod, $request->input('amount_paid'), $totalAmount);
                 $transactionNumber = $this->makeTransactionNumber($timestamp);
                 $walkInNumber = $customerData['customer_id'] === null ? $this->makeWalkInNumber($timestamp) : null;
 
@@ -141,6 +147,17 @@ class SaleController extends Controller
                     'created_at' => $timestamp,
                     'updated_at' => $timestamp,
                 ]);
+
+                if ($paymentMethod === 'Credit') {
+                    DB::table('credit_transactions')->insert([
+                        'sale_id' => $saleId,
+                        'customer_id' => $customerData['customer_id'],
+                        'original_total' => $totalAmount,
+                        'initial_payment' => $payment['amount_paid'],
+                        'created_at' => $timestamp,
+                        'updated_at' => $timestamp,
+                    ]);
+                }
 
                 return [
                     'id' => $saleId,
@@ -304,6 +321,10 @@ class SaleController extends Controller
     private function preparePayment(string $paymentMethod, mixed $amountPaid, float $totalAmount): array
     {
         $paid = $amountPaid === null ? 0 : (float) $amountPaid;
+
+        if ($paid < 0) {
+            throw new InvalidArgumentException('Amount paid cannot be negative.');
+        }
 
         if ($paymentMethod === 'GCash' && $paid === 0.0) {
             $paid = $totalAmount;

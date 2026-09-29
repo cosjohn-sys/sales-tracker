@@ -84,6 +84,57 @@ class CustomerController extends Controller
             ->orderByDesc('sales.sale_date')
             ->get();
 
-        return new JsonResponse(['data' => ['customer' => $customer, 'history' => $history]]);
+        $creditInit = DB::table('credit_transactions')
+            ->where('customer_id', $id)
+            ->select(
+                DB::raw('COALESCE(SUM(original_total), 0) as total_credit'),
+                DB::raw('COALESCE(SUM(initial_payment), 0) as total_initial')
+            )
+            ->first();
+
+        $creditSub = DB::table('credit_payments')
+            ->where('customer_id', $id)
+            ->select(
+                DB::raw('COALESCE(SUM(amount_paid), 0) as total_subsequent'),
+                DB::raw('MAX(payment_date) as last_payment_date')
+            )
+            ->first();
+
+        $lastSale = DB::table('credit_transactions')
+            ->join('sales', 'sales.id', '=', 'credit_transactions.sale_id')
+            ->where('credit_transactions.customer_id', $id)
+            ->selectRaw('MAX(sales.sale_date) as last_sale_date')
+            ->value('last_sale_date');
+
+        $totalCredit = (float) ($creditInit?->total_credit ?? 0);
+        $totalInitial = (float) ($creditInit?->total_initial ?? 0);
+        $totalSubsequent = (float) ($creditSub?->total_subsequent ?? 0);
+        $totalPayments = round($totalInitial + $totalSubsequent, 2);
+        $remainingBalance = round($totalCredit - $totalPayments, 2);
+        $lastPaymentDate = $creditSub?->last_payment_date ?? $lastSale;
+
+        $hasSubsequent = DB::table('credit_payments')->where('customer_id', $id)->exists();
+        $status = 'N/A';
+        if ($totalCredit > 0 || $totalPayments > 0) {
+            if ($remainingBalance <= 0.0001) {
+                $status = $hasSubsequent ? 'Fully Settled' : 'Paid';
+            } elseif ($totalPayments > 0) {
+                $status = 'Partially Paid';
+            } else {
+                $status = 'Unpaid/Credit';
+            }
+        }
+
+        $creditSummary = [
+            'total_credit' => $totalCredit,
+            'total_initial_payments' => $totalInitial,
+            'total_subsequent_payments' => $totalSubsequent,
+            'total_payments' => $totalPayments,
+            'remaining_balance' => $remainingBalance,
+            'last_payment_date' => $lastPaymentDate,
+            'payment_status' => $status,
+        ];
+
+        return new JsonResponse(['data' => ['customer' => $customer, 'history' => $history, 'credit_summary' => $creditSummary]]);
     }
 }

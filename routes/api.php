@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CreditController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProductController;
@@ -26,6 +27,7 @@ Route::put('/products/{id}', [ProductController::class, 'update']);
 Route::get('/customers', [CustomerController::class, 'index']);
 Route::post('/customers', [CustomerController::class, 'store']);
 Route::get('/customers/{id}', [CustomerController::class, 'show']);
+Route::get('/customers/{id}/credit-summary', [CreditController::class, 'customerSummary']);
 
 Route::get('/sales', [SaleController::class, 'index']);
 Route::post('/sales', [SaleController::class, 'store']);
@@ -39,3 +41,6 @@ Route::get('/reports/trends', [ReportController::class, 'trends']);
 Route::get('/reports/inventory', [ReportController::class, 'inventoryReport']);
 
 Route::post('/stock-adjustments', [StockAdjustmentController::class, 'store']);
+
+Route::get('/credit-dashboard', [CreditController::class, 'dashboard']);
+Route::post('/credit-payments', [CreditController::class, 'storePayment']);
