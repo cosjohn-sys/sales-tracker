@@ -51,6 +51,16 @@
                     <span class="tab-icon" aria-hidden="true">{{ tab.icon }}</span>
                     <span class="tab-label">{{ tab.label }}</span>
                 </button>
+                <button
+                    v-if="user"
+                    type="button"
+                    class="tab-button sidebar-logout-btn"
+                    :title="sidebarCollapsed ? 'Log Out' : null"
+                    @click="handleSidebarLogout"
+                >
+                    <span class="tab-icon" aria-hidden="true">⎋</span>
+                    <span class="tab-label">Log Out</span>
+                </button>
             </nav>
         </aside>
 
@@ -77,7 +87,7 @@
                 </div>
                 <div class="topbar-actions">
                     <button
-                        class="btn btn-primary"
+                        class="btn btn-primary topbar-refresh-btn hide-mobile"
                         type="button"
                         @click="refreshAll"
                         :disabled="loading"
@@ -86,10 +96,10 @@
                         <span v-if="!loading" aria-hidden="true">↻</span>
                         Refresh
                     </button>
-                    <span v-if="user" class="user-pill" :title="'Signed in as ' + user.name">
+                    <span v-if="user" class="user-pill hide-mobile" :title="'Signed in as ' + user.name" >
                         {{ user.name }}
                     </span>
-                    <button v-if="user" class="btn btn-muted" type="button" @click="$emit('logout')">
+                    <button v-if="user" class="btn btn-muted topbar-logout-btn hide-mobile" type="button" @click="$emit('logout')">
                         <span aria-hidden="true">⎋</span>
                         Log Out
                     </button>
@@ -1306,6 +1316,10 @@ export default {
             this.activeTab = tabId;
             this.closeMobileSidebar();
         },
+        handleSidebarLogout() {
+            this.closeMobileSidebar();
+            this.$emit('logout');
+        },
         handleShellKeydown(event) {
             if (event.key === 'Escape') {
                 this.closeMobileSidebar();
@@ -1713,6 +1727,12 @@ export default {
 </script>
 
 <style scoped>
+@media (max-width: 820px) {
+    .hide-mobile {
+        display: none !important;
+    }
+}
+
 .customer-select-wrapper {
     position: relative;
     display: flex;
