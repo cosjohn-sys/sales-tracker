@@ -460,7 +460,7 @@
                                     <th>Stock</th>
                                     <th>Min Stock</th>
                                     <th>Status</th>
-                                    <th></th>
+                                    <!-- <th></th> -->
                                 </tr>
                             </thead>
                             <tbody>
@@ -500,9 +500,9 @@
                                                 {{ product.status }}
                                             </span>
                                         </td>
-                                        <td class="row-actions">
+                                        <!-- <td class="row-actions">
                                             <button class="btn btn-small btn-muted" type="button" @click="editProduct(product)">✎ Edit</button>
-                                        </td>
+                                        </td> -->
                                     </template>
                                 </tr>
                             </tbody>
