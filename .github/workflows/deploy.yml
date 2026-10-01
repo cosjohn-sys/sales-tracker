@@ -1,4 +1,4 @@
-name: Deploy Laravel to InfinityFree
+name: Deploy Laravel 10 to InfinityFree
 
 on:
   push:
@@ -22,12 +22,7 @@ jobs:
           coverage: none
 
       - name: Install Composer dependencies
-        run: |
-          composer install \
-            --no-dev \
-            --optimize-autoloader \
-            --no-interaction \
-            --prefer-dist
+        run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -38,15 +33,15 @@ jobs:
       - name: Install NPM dependencies
         run: npm ci
 
-      - name: Build frontend assets
+      - name: Build frontend
         run: npm run build
 
-      - name: Prepare InfinityFree deployment
+      - name: Prepare deployment
         run: |
           rm -rf deploy
-          mkdir -p deploy
+          mkdir deploy
 
-          # Copy the Laravel application
+          # Copy Laravel application files
           rsync -av \
             --exclude='.git' \
             --exclude='.github' \
@@ -55,26 +50,13 @@ jobs:
             --exclude='.env' \
             ./ deploy/
 
-          # Copy Laravel public files directly into the web root
+          # Copy everything from public/ into the web root
           rsync -av public/ deploy/
 
-          # Adjust Laravel's public/index.php paths because
-          # InfinityFree uses /htdocs as the document root.
-          python3 - <<'PY'
-          from pathlib import Path
+          # Fix Laravel 10 index.php paths
+          sed -i "s#__DIR__.'/../#__DIR__.'/#g" deploy/index.php
 
-          index = Path("deploy/index.php")
-
-          if index.exists():
-              content = index.read_text()
-              content = content.replace(
-                  "__DIR__.'/../",
-                  "__DIR__.'/"
-              )
-              index.write_text(content)
-          PY
-
-          # Use a simple .htaccess suitable for the /htdocs root
+          # Replace .htaccess with a simple Laravel rewrite
           cat > deploy/.htaccess <<'EOF'
           <IfModule mod_rewrite.c>
               RewriteEngine On
@@ -85,8 +67,10 @@ jobs:
           </IfModule>
           EOF
 
-          echo "Deployment directory:"
-          find deploy -maxdepth 2 -type f | sort | head -200
+          echo "Deployment prepared:"
+          ls -la deploy
+          echo "Laravel index.php:"
+          cat deploy/index.php
 
       - name: Upload to InfinityFree
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
@@ -94,5 +78,5 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ./
+          local-dir: ./deploy/
           server-dir: /htdocs/
