@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -41,21 +42,18 @@ jobs:
           rm -rf deploy
           mkdir deploy
 
-          # Copy Laravel application files
           rsync -av \
             --exclude='.git' \
             --exclude='.github' \
             --exclude='node_modules' \
             --exclude='public' \
+            --exclude='.env' \
             ./ deploy/
 
-          # Copy everything from public/ into the web root
           rsync -av public/ deploy/
 
-          # Fix Laravel 10 index.php paths
           sed -i "s#__DIR__.'/../#__DIR__.'/#g" deploy/index.php
 
-          # Replace .htaccess with a simple Laravel rewrite
           cat > deploy/.htaccess <<'EOF'
           <IfModule mod_rewrite.c>
               RewriteEngine On
@@ -68,7 +66,8 @@ jobs:
 
           echo "Deployment prepared:"
           ls -la deploy
-          echo "Laravel index.php:"
+
+          echo "Deployment index.php:"
           cat deploy/index.php
 
       - name: Upload to InfinityFree
