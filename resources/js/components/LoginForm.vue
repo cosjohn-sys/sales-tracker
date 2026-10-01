@@ -1,7 +1,7 @@
 <template>
     <section class="login-form-panel" aria-labelledby="login-title">
         <div class="login-form-heading">
-            <p class="eyebrow">Welcome back</p>
+            <p class="eyebrow">Welcome backs</p>
             <h2 id="login-title">Sign in</h2>
         </div>
 
