@@ -47,7 +47,6 @@ jobs:
             --exclude='.github' \
             --exclude='node_modules' \
             --exclude='public' \
-            --exclude='.env' \
             ./ deploy/
 
           # Copy everything from public/ into the web root
