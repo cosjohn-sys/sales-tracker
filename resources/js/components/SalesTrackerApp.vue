@@ -13,7 +13,7 @@
                     <div class="brand-mark">RFC</div>
                     <div class="brand-copy">
                         <h1>Store</h1>
-                        <p>Sales and stock</p>
+                        <p>Sales and stock 2026</p>
                     </div>
                 </div>
 
