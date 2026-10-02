@@ -106,8 +106,8 @@
                 </div>
             </header>
 
-            <div v-if="notice.text" :class="['notice', notice.type]" role="alert">
-                <span aria-hidden="true">{{ notice.type === 'success' ? '✓' : '✕' }}</span>
+            <div v-if="notice.text && notice.type === 'success'" :class="['notice', notice.type]" role="alert">
+                <span aria-hidden="true">✓</span>
                 <span>{{ notice.text }}</span>
             </div>
 
@@ -209,14 +209,14 @@
                     <p class="form-section-title">Customer Information</p>
                     <div class="form-grid">
                         <label>
-                            Customer Type<span class="required">*</span>
+                            Customer Type
                             <select v-model="saleForm.customer_type" @change="syncCustomerType" style="width: 70%;">
                                 <option>Walk-in Customer</option>
                                 <option>Regular Customer</option>
                             </select>
                         </label>
                         <label id="customer-select-dropdown" class="customer-select-wrapper">
-                            Customer Name<span class="required">*</span>
+                            Customer Name
                             <div
                                 class="vselect-field"
                                 :class="{ 'vselect-focused': customerDropdownOpen }"
@@ -326,7 +326,7 @@
                     <p class="form-section-title" style="margin-top: 8px;">Payment Details</p>
                     <div class="payment-grid">
                         <label>
-                            Payment Method<span class="required">*</span>
+                            Payment Method
                             <select v-model="saleForm.payment_method" @change="syncPaymentAmount">
                                 <option value="Cash">💵 Cash</option>
                                 <option value="GCash">📱 GCash</option>
@@ -334,7 +334,7 @@
                             </select>
                         </label>
                         <label>
-                            Amount Paid<span class="required">*</span>
+                            Amount Paid
                             <input v-model.number="saleForm.amount_paid" type="number" min="0" step="0.01" placeholder="0.00">
                         </label>
                         <div class="change-box">
@@ -411,45 +411,13 @@
             </section>
 
             <section v-if="activeTab === 'products'" class="page-grid">
-                <form class="panel" @submit.prevent="saveProduct" novalidate>
-                    <div class="panel-heading">
-                        <h3>📦 Add Product</h3>
-                    </div>
-                    <div class="form-grid product-form">
-                        <label>
-                            Product Name<span class="required">*</span>
-                            <input v-model="productForm.name" required placeholder="e.g. Premium Ice Candy">
-                        </label>
-                        <label>
-                            Selling Price (₱)<span class="required">*</span>
-                            <input v-model.number="productForm.selling_price" type="number" min="0" step="0.01" required placeholder="0.00">
-                        </label>
-                        <label>
-                            Current Stock<span class="required">*</span>
-                            <input v-model.number="productForm.current_stock" type="number" min="0" required placeholder="0">
-                        </label>
-                        <label>
-                            Minimum Stock Level<span class="required">*</span>
-                            <input v-model.number="productForm.minimum_stock" type="number" min="0" required placeholder="5">
-                            <span class="form-helper">Alert when stock drops below this number</span>
-                        </label>
-                        <label>
-                            Status<span class="required">*</span>
-                            <select v-model="productForm.status">
-                                <option value="Active">🟢 Active</option>
-                                <option value="Inactive">⚪ Inactive</option>
-                            </select>
-                        </label>
-                    </div>
-                    <button class="btn btn-primary" type="submit">
-                        <span aria-hidden="true">+</span> Save Product
-                    </button>
-                </form>
-
                 <section class="panel">
                     <div class="panel-heading">
                         <h3>📦 Products</h3>
                         <span class="eyebrow">{{ products.length }} total</span>
+                        <button class="btn btn-primary btn-small" type="button" @click="openProductModal">
+                            <span aria-hidden="true">+</span> Add Product
+                        </button>
                     </div>
                     <div class="table-wrap">
                         <table>
@@ -512,32 +480,13 @@
             </section>
 
             <section v-if="activeTab === 'customers'" class="page-grid">
-                <form class="panel" @submit.prevent="saveCustomer" novalidate>
-                    <div class="panel-heading">
-                        <h3>👥 Add Customer</h3>
-                    </div>
-                    <div class="form-grid">
-                        <label>
-                            Customer Name<span class="required">*</span>
-                            <input v-model="customerForm.name" required placeholder="e.g. Juan Dela Cruz">
-                        </label>
-                        <label>
-                            Customer Type<span class="required">*</span>
-                            <select v-model="customerForm.customer_type">
-                                <option value="Regular Customer">⭐ Regular Customer</option>
-                                <option value="Walk-in Customer">🚶 Walk-in Customer</option>
-                            </select>
-                        </label>
-                    </div>
-                    <button class="btn btn-primary" type="submit">
-                        <span aria-hidden="true">+</span> Save Customer
-                    </button>
-                </form>
-
                 <section class="panel">
                     <div class="panel-heading">
                         <h3>👥 Customers</h3>
                         <span class="eyebrow">{{ customers.length }} total</span>
+                        <button class="btn btn-primary btn-small" type="button" @click="openCustomerModal">
+                            <span aria-hidden="true">+</span> Add Customer
+                        </button>
                     </div>
                     <div class="table-wrap">
                         <table>
@@ -580,47 +529,13 @@
             </section>
 
             <section v-if="activeTab === 'inventory'" class="page-grid">
-                <form class="panel" @submit.prevent="saveStockAdjustment" novalidate>
-                    <div class="panel-heading">
-                        <h3>📋 Stock Adjustment</h3>
-                    </div>
-                    <div class="form-grid">
-                        <label>
-                            Product<span class="required">*</span>
-                            <select v-model.number="stockForm.product_id" required>
-                                <option disabled value="">— Select a product —</option>
-                                <option v-for="product in products" :key="product.id" :value="product.id">
-                                    {{ product.name }} — Current stock: {{ product.current_stock }}
-                                </option>
-                            </select>
-                        </label>
-                        <label>
-                            Adjustment Type<span class="required">*</span>
-                            <select v-model="stockForm.adjustment_type">
-                                <option value="Add">➕ Add Stock (Restock)</option>
-                                <option value="Deduct">➖ Deduct Stock</option>
-                                <option value="Damaged">🗑️ Damaged / Disposed</option>
-                            </select>
-                        </label>
-                        <label>
-                            Quantity<span class="required">*</span>
-                            <input v-model.number="stockForm.quantity" type="number" min="1" step="1" required placeholder="1">
-                        </label>
-                        <label>
-                            Reason / Notes
-                            <input v-model="stockForm.reason" placeholder="e.g. Received from supplier, expired items">
-                            <span class="form-helper">Optional but recommended for audit trail</span>
-                        </label>
-                    </div>
-                    <button class="btn btn-primary" type="submit">
-                        <span aria-hidden="true">✓</span> Save Adjustment
-                    </button>
-                </form>
-
                 <section class="panel">
                     <div class="panel-heading">
                         <h3>📋 Inventory Records</h3>
                         <span class="eyebrow">{{ inventoryReport.length }} records</span>
+                        <button class="btn btn-primary btn-small" type="button" @click="openInventoryModal">
+                            <span aria-hidden="true">+</span> Add Inventory
+                        </button>
                     </div>
                     <div class="table-wrap">
                         <table>
@@ -1059,7 +974,7 @@
                     </div>
                     <form class="form-grid" @submit.prevent="saveCreditPayment" novalidate>
                         <label>
-                            Customer<span class="required">*</span>
+                            Customer
                             <select v-model.number="creditPaymentForm.customer_id" required>
                                 <option disabled value="">— Select customer with balance —</option>
                                 <option
@@ -1086,7 +1001,7 @@
                             <span class="form-helper">Optional. FIFO is applied automatically if not specified.</span>
                         </label>
                         <label>
-                            Amount Paid (₱)<span class="required">*</span>
+                            Amount Paid (₱)
                             <input v-model.number="creditPaymentForm.amount_paid" type="number" min="0.01" step="0.01" required placeholder="0.00">
                         </label>
                         <label>
@@ -1111,6 +1026,151 @@
                     </form>
                 </section>
             </section>
+
+            <div v-if="showProductModal" class="modal-backdrop" @click.self="closeProductModal">
+                <div class="modal">
+                    <div class="modal-header">
+                        <h3>📦 Add Product</h3>
+                        <button class="icon-btn" type="button" @click="closeProductModal" aria-label="Close">✕</button>
+                    </div>
+                    <form class="modal-body" @submit.prevent="saveProduct" novalidate>
+                        <div class="form-grid product-form">
+                            <label>
+                                Product Name
+                                <input v-model="productForm.name" required placeholder="e.g. Premium Ice Candy">
+                            </label>
+                            <label>
+                                Selling Price (₱)
+                                <input v-model.number="productForm.selling_price" type="number" min="0" step="0.01" required placeholder="0.00">
+                            </label>
+                            <label>
+                                Current Stock
+                                <input v-model.number="productForm.current_stock" type="number" min="0" required placeholder="0">
+                            </label>
+                            <label>
+                                Minimum Stock Level
+                                <input v-model.number="productForm.minimum_stock" type="number" min="0" required placeholder="5">
+                                <span class="form-helper">Alert when stock drops below this number</span>
+                            </label>
+                            <label>
+                                Status
+                                <select v-model="productForm.status">
+                                    <option value="Active">🟢 Active</option>
+                                    <option value="Inactive">⚪ Inactive</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div class="modal-actions">
+                            <button class="btn btn-muted" type="button" @click="closeProductModal">Cancel</button>
+                            <button class="btn btn-primary" type="submit">
+                                <span aria-hidden="true">+</span> Save Product
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div v-if="showCustomerModal" class="modal-backdrop" @click.self="closeCustomerModal">
+                <div class="modal modal-sm">
+                    <div class="modal-header">
+                        <h3>👥 Add Customer</h3>
+                        <button class="icon-btn" type="button" @click="closeCustomerModal" aria-label="Close">✕</button>
+                    </div>
+                    <form class="modal-body" @submit.prevent="saveCustomer" novalidate>
+                        <div class="form-grid">
+                            <label>
+                                Customer Name
+                                <input v-model="customerForm.name" required placeholder="e.g. Juan Dela Cruz">
+                            </label>
+                            <label>
+                                Customer Type
+                                <select v-model="customerForm.customer_type">
+                                    <option value="Regular Customer">⭐ Regular Customer</option>
+                                    <option value="Walk-in Customer">🚶 Walk-in Customer</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div class="modal-actions">
+                            <button class="btn btn-muted" type="button" @click="closeCustomerModal">Cancel</button>
+                            <button class="btn btn-primary" type="submit">
+                                <span aria-hidden="true">+</span> Save Customer
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div v-if="showInventoryModal" class="modal-backdrop" @click.self="closeInventoryModal">
+                <div class="modal">
+                    <div class="modal-header">
+                        <h3>📋 Stock Adjustment</h3>
+                        <button class="icon-btn" type="button" @click="closeInventoryModal" aria-label="Close">✕</button>
+                    </div>
+                    <form class="modal-body" @submit.prevent="saveStockAdjustment" novalidate>
+                        <div class="form-grid">
+                            <label>
+                                Product
+                                <select v-model.number="stockForm.product_id" required>
+                                    <option disabled value="">— Select a product —</option>
+                                    <option v-for="product in products" :key="product.id" :value="product.id">
+                                        {{ product.name }} — Current stock: {{ product.current_stock }}
+                                    </option>
+                                </select>
+                            </label>
+                            <label>
+                                Adjustment Type
+                                <select v-model="stockForm.adjustment_type">
+                                    <option value="Add">➕ Add Stock (Restock)</option>
+                                    <option value="Deduct">➖ Deduct Stock</option>
+                                    <option value="Damaged">🗑️ Damaged / Disposed</option>
+                                </select>
+                            </label>
+                            <label>
+                                Quantity
+                                <input v-model.number="stockForm.quantity" type="number" min="1" step="1" required placeholder="1">
+                            </label>
+                            <label>
+                                Reason / Notes
+                                <input v-model="stockForm.reason" placeholder="e.g. Received from supplier, expired items">
+                                <span class="form-helper">Optional but recommended for audit trail</span>
+                            </label>
+                        </div>
+                        <div class="modal-actions">
+                            <button class="btn btn-muted" type="button" @click="closeInventoryModal">Cancel</button>
+                            <button class="btn btn-primary" type="submit">
+                                <span aria-hidden="true">✓</span> Save Adjustment
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div v-if="showErrorModal" class="modal-backdrop" @click.self="closeErrorModal">
+                <div class="modal modal-error">
+                    <div class="modal-header error-header">
+                        <div class="error-title-wrap">
+                            <span class="error-icon" aria-hidden="true">⚠️</span>
+                            <h3>{{ errorTitle || 'Validation Failed' }}</h3>
+                        </div>
+                        <button class="icon-btn" type="button" @click="closeErrorModal" aria-label="Close">✕</button>
+                    </div>
+                    <div class="modal-body error-body">
+                        <p v-if="errorMessage" class="error-main-message">{{ errorMessage }}</p>
+                        <ul v-if="errorDetails.length > 0" class="error-details-list">
+                            <li v-for="(detail, index) in errorDetails" :key="index">
+                                <span aria-hidden="true">•</span>
+                                <span>{{ detail }}</span>
+                            </li>
+                        </ul>
+                        <div class="modal-actions">
+                            <button class="btn btn-primary btn-danger" type="button" @click="closeErrorModal">
+                                Got it
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </main>
     </div>
 </template>
@@ -1186,6 +1246,13 @@ export default {
             },
             customerDropdownOpen: false,
             customerSearchQuery: '',
+            showProductModal: false,
+            showCustomerModal: false,
+            showInventoryModal: false,
+            showErrorModal: false,
+            errorTitle: '',
+            errorMessage: '',
+            errorDetails: [],
         };
     },
     computed: {
@@ -1312,6 +1379,47 @@ export default {
         closeMobileSidebar() {
             this.mobileSidebarOpen = false;
         },
+        openProductModal() {
+            this.productForm = this.emptyProductForm();
+            this.showProductModal = true;
+        },
+        closeProductModal() {
+            this.showProductModal = false;
+        },
+        openCustomerModal() {
+            this.customerForm = {
+                name: '',
+                customer_type: 'Regular Customer',
+            };
+            this.showCustomerModal = true;
+        },
+        closeCustomerModal() {
+            this.showCustomerModal = false;
+        },
+        openInventoryModal() {
+            this.stockForm = {
+                product_id: '',
+                adjustment_type: 'Add',
+                quantity: 1,
+                reason: '',
+            };
+            this.showInventoryModal = true;
+        },
+        closeInventoryModal() {
+            this.showInventoryModal = false;
+        },
+        openErrorModal({ title = 'Validation Failed', message = '', details = [] } = {}) {
+            this.errorTitle = title;
+            this.errorMessage = message;
+            this.errorDetails = Array.isArray(details) ? details : [];
+            this.showErrorModal = true;
+        },
+        closeErrorModal() {
+            this.showErrorModal = false;
+            this.errorTitle = '';
+            this.errorMessage = '';
+            this.errorDetails = [];
+        },
         selectTab(tabId) {
             this.activeTab = tabId;
             this.closeMobileSidebar();
@@ -1323,6 +1431,10 @@ export default {
         handleShellKeydown(event) {
             if (event.key === 'Escape') {
                 this.closeMobileSidebar();
+                if (this.showProductModal) this.closeProductModal();
+                if (this.showCustomerModal) this.closeCustomerModal();
+                if (this.showInventoryModal) this.closeInventoryModal();
+                if (this.showErrorModal) this.closeErrorModal();
             }
         },
         async refreshAll() {
@@ -1503,6 +1615,7 @@ export default {
             try {
                 await window.axios.post('/api/products', this.productForm);
                 this.productForm = this.emptyProductForm();
+                this.closeProductModal();
                 this.showNotice('Product saved.');
                 await this.refreshAll();
             } catch (error) {
@@ -1540,6 +1653,7 @@ export default {
                     name: '',
                     customer_type: 'Regular Customer',
                 };
+                this.closeCustomerModal();
                 this.showNotice('Customer saved.');
                 await this.refreshAll();
             } catch (error) {
@@ -1555,6 +1669,7 @@ export default {
                     quantity: 1,
                     reason: '',
                 };
+                this.closeInventoryModal();
                 this.showNotice('Stock updated.');
                 await this.refreshAll();
             } catch (error) {
@@ -1713,14 +1828,63 @@ export default {
             }, 3000);
         },
         showError(error) {
-            const message = error.response && error.response.data && error.response.data.message
-                ? error.response.data.message
-                : 'Something went wrong.';
+            const data = error && error.response && error.response.data
+                ? error.response.data
+                : null;
 
-            this.notice = {
-                type: 'error',
-                text: message,
-            };
+            const status = error && error.response && error.response.status
+                ? error.response.status
+                : null;
+
+            const fallbackMessage = 'Something went wrong. Please try again.';
+            let title = 'Validation Failed';
+            let message = '';
+            let details = [];
+
+            if (data) {
+                if (data.errors && typeof data.errors === 'object') {
+                    for (const [field, messages] of Object.entries(data.errors)) {
+                        const prettyField = String(field)
+                            .replace(/[_-]/g, ' ')
+                            .replace(/\b\w/g, (c) => c.toUpperCase());
+                        if (Array.isArray(messages)) {
+                            messages.forEach((msg) => {
+                                details.push(`${prettyField}: ${msg}`);
+                            });
+                        } else if (messages) {
+                            details.push(`${prettyField}: ${String(messages)}`);
+                        }
+                    }
+                }
+
+                if (data.message && typeof data.message === 'string') {
+                    message = data.message;
+                }
+            }
+
+            if (status === 422) {
+                title = 'Validation Failed';
+            } else if (status === 401 || status === 403) {
+                title = 'Authorization Error';
+            } else if (status === 404) {
+                title = 'Not Found';
+            } else if (status && status >= 500) {
+                title = 'Server Error';
+            } else if (error && !error.response) {
+                title = 'Network Error';
+                message = message || 'Unable to reach the server. Please check your connection.';
+            }
+
+            if (!message && details.length === 0) {
+                message = fallbackMessage;
+            }
+
+            if (!message && details.length === 1) {
+                message = details[0];
+                details = [];
+            }
+
+            this.openErrorModal({ title, message, details });
         },
     },
 };
@@ -1937,5 +2101,220 @@ export default {
 .vselect-create:hover {
     color: #4338ca;
     text-decoration: underline;
+}
+
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(17, 24, 39, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 16px;
+    animation: fadeIn 0.15s ease-out;
+}
+
+.modal {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    width: 100%;
+    max-width: 560px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: slideUp 0.2s ease-out;
+}
+
+.modal.modal-sm {
+    max-width: 440px;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 22px;
+    border-bottom: 1px solid #f3f4f6;
+    flex-shrink: 0;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.modal-body {
+    padding: 22px;
+    overflow-y: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 4px;
+    padding-top: 8px;
+    border-top: 1px solid #f9fafb;
+}
+
+.icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: none;
+    background: transparent;
+    color: #6b7280;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 15px;
+    transition: background 0.12s ease, color 0.12s ease;
+}
+
+.icon-btn:hover {
+    background: #f3f4f6;
+    color: #111827;
+}
+
+.icon-btn.danger:hover {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.btn-small {
+    padding: 7px 13px;
+    font-size: 13px;
+}
+
+.panel-heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.panel-heading .eyebrow {
+    margin-left: auto;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(16px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@media (max-width: 540px) {
+    .modal {
+        border-radius: 10px;
+    }
+
+    .modal-header {
+        padding: 14px 16px;
+    }
+
+    .modal-body {
+        padding: 16px;
+    }
+}
+
+.modal-error {
+    max-width: 480px;
+    border-top: 4px solid #dc2626;
+}
+
+.error-header {
+    border-bottom: 1px solid #fee2e2;
+    background: #fef2f2;
+}
+
+.error-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.error-icon {
+    font-size: 20px;
+    line-height: 1;
+}
+
+.error-header h3 {
+    color: #991b1b;
+}
+
+.error-body {
+    gap: 14px;
+}
+
+.error-main-message {
+    margin: 0;
+    padding: 12px 14px;
+    background: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    font-weight: 500;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.error-details-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.error-details-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    background: #fff7ed;
+    border-left: 3px solid #f97316;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #7c2d12;
+    line-height: 1.45;
+}
+
+.error-details-list li > span:first-child {
+    color: #ea580c;
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.btn-danger {
+    background: #dc2626;
+    border-color: #dc2626;
+    color: #ffffff;
+}
+
+.btn-danger:hover {
+    background: #b91c1c;
+    border-color: #b91c1c;
 }
 </style>
