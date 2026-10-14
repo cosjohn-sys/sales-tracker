@@ -317,17 +317,75 @@
                             <span></span>
                         </div>
                         <div v-for="(item, index) in saleForm.items" :key="index" class="line-item">
-                            <select v-model.number="item.product_id" required>
-                                <option disabled value="">— Select a product —</option>
-                                <option
-                                    v-for="product in activeProducts"
-                                    :key="product.id"
-                                    :value="product.id"
-                                    :disabled="product.current_stock <= 0"
+                            <div class="product-select-wrapper" @click.stop>
+                                <div
+                                    class="vselect-field product-select-field"
+                                    :class="{ 'vselect-focused': productDropdownOpenIndex === index }"
+                                    role="combobox"
+                                    aria-haspopup="listbox"
+                                    :aria-expanded="productDropdownOpenIndex === index"
+                                    @click="toggleProductDropdown(index)"
                                 >
-                                    {{ product.name }} — {{ money(product.selling_price) }} (Stock: {{ product.current_stock }})
-                                </option>
-                            </select>
+                                    <div class="vselect-selection">
+                                        <span v-if="item.product_id" class="vselect-selected-text">
+                                            {{ saleProductLabel(item) }}
+                                        </span>
+                                        <span v-else class="vselect-placeholder">
+                                            Search item name or code
+                                        </span>
+                                    </div>
+                                    <div class="vselect-actions">
+                                        <span
+                                            v-if="item.product_id"
+                                            class="vselect-clear"
+                                            @click.stop="clearProductSelection(item)"
+                                            title="Clear item"
+                                        >&times;</span>
+                                        <span class="vselect-caret" :class="{ 'open': productDropdownOpenIndex === index }">▾</span>
+                                    </div>
+                                </div>
+
+                                <div v-if="productDropdownOpenIndex === index" class="vselect-menu product-select-menu" @click.stop>
+                                    <div class="vselect-search">
+                                        <input
+                                            :id="productSearchInputId(index)"
+                                            v-model="item.product_search"
+                                            type="search"
+                                            placeholder="Type item name or code"
+                                            @keydown.enter.prevent="selectFirstAvailableProduct(item)"
+                                            @keydown.esc.prevent="closeProductDropdown"
+                                        >
+                                    </div>
+                                    <ul class="vselect-list product-results" role="listbox">
+                                        <li
+                                            v-for="product in filteredProductsForSaleItem(item)"
+                                            :key="product.id"
+                                            class="vselect-option product-result-option"
+                                            :class="{
+                                                selected: Number(item.product_id) === Number(product.id),
+                                                disabled: Number(product.current_stock) <= 0
+                                            }"
+                                            role="option"
+                                            :aria-selected="Number(item.product_id) === Number(product.id)"
+                                            :aria-disabled="Number(product.current_stock) <= 0"
+                                            @click="selectProductForSale(item, product)"
+                                        >
+                                            <span class="vselect-option-main">
+                                                <span class="vselect-option-text">
+                                                    <span v-if="productCode(product)" class="product-code-pill">{{ productCode(product) }}</span>
+                                                    {{ product.name }}
+                                                </span>
+                                                <span class="vselect-option-sub">
+                                                    {{ productOptionMeta(product) }}
+                                                </span>
+                                            </span>
+                                        </li>
+                                        <li v-if="filteredProductsForSaleItem(item).length === 0" class="vselect-option vselect-empty">
+                                            No matching active items.
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
                             <input v-model.number="item.quantity" type="number" min="1" step="1" required>
                             <span>{{ money(itemPrice(item)) }}</span>
                             <strong>{{ money(itemTotal(item)) }}</strong>
@@ -1266,6 +1324,7 @@ export default {
             },
             customerDropdownOpen: false,
             customerSearchQuery: '',
+            productDropdownOpenIndex: null,
             showProductModal: false,
             showCustomerModal: false,
             showInventoryModal: false,
@@ -1361,10 +1420,12 @@ export default {
     mounted() {
         window.addEventListener('keydown', this.handleShellKeydown);
         document.addEventListener('click', this.handleOutsideCustomerDropdown);
+        document.addEventListener('click', this.handleOutsideProductDropdown);
     },
     beforeUnmount() {
         window.removeEventListener('keydown', this.handleShellKeydown);
         document.removeEventListener('click', this.handleOutsideCustomerDropdown);
+        document.removeEventListener('click', this.handleOutsideProductDropdown);
     },
     methods: {
         emptyDashboard() {
@@ -1394,6 +1455,7 @@ export default {
                 items: [
                     {
                         product_id: '',
+                        product_search: '',
                         quantity: 1,
                     },
                 ],
@@ -1488,6 +1550,7 @@ export default {
                 if (this.showCustomerModal) this.closeCustomerModal();
                 if (this.showInventoryModal) this.closeInventoryModal();
                 if (this.showErrorModal) this.closeErrorModal();
+                this.closeProductDropdown();
             }
         },
         async refreshAll() {
@@ -1733,11 +1796,13 @@ export default {
         addSaleItem() {
             this.saleForm.items.push({
                 product_id: '',
+                product_search: '',
                 quantity: 1,
             });
         },
         removeSaleItem(index) {
             this.saleForm.items.splice(index, 1);
+            this.closeProductDropdown();
         },
         itemPrice(item) {
             const product = this.products.find((row) => Number(row.id) === Number(item.product_id));
@@ -1762,6 +1827,7 @@ export default {
             }
         },
         toggleCustomerDropdown() {
+            this.closeProductDropdown();
             this.customerDropdownOpen = !this.customerDropdownOpen;
             if (this.customerDropdownOpen) {
                 this.customerSearchQuery = this.saleForm.customer_name;
@@ -1814,6 +1880,100 @@ export default {
             const dropdown = document.getElementById('customer-select-dropdown');
             if (dropdown && !dropdown.contains(event.target)) {
                 this.closeCustomerDropdown();
+            }
+        },
+        productSearchInputId(index) {
+            return `product-search-input-${index}`;
+        },
+        saleProduct(item) {
+            return this.products.find((row) => Number(row.id) === Number(item.product_id));
+        },
+        saleProductLabel(item) {
+            const product = this.saleProduct(item);
+
+            return product ? this.productDisplayName(product) : 'Selected item';
+        },
+        productCode(product) {
+            const codeFields = ['item_code', 'product_code', 'code', 'sku', 'barcode'];
+            const value = codeFields
+                .map((field) => product[field])
+                .find((candidate) => candidate !== undefined && candidate !== null && String(candidate).trim() !== '');
+
+            return value ? String(value).trim() : '';
+        },
+        productDisplayName(product) {
+            const code = this.productCode(product);
+
+            return code ? `${code} - ${product.name}` : product.name;
+        },
+        productOptionMeta(product) {
+            return [
+                this.money(product.selling_price),
+                `Stock: ${product.current_stock}`,
+            ].join(' - ');
+        },
+        productSearchText(product) {
+            return [
+                product.name,
+                this.productCode(product),
+                product.id,
+            ]
+                .filter((value) => value !== undefined && value !== null && String(value).trim() !== '')
+                .join(' ')
+                .toLowerCase();
+        },
+        filteredProductsForSaleItem(item) {
+            const query = String(item.product_search || '').trim().toLowerCase();
+
+            if (!query) {
+                return this.activeProducts;
+            }
+
+            return this.activeProducts.filter((product) => this.productSearchText(product).includes(query));
+        },
+        toggleProductDropdown(index) {
+            if (this.productDropdownOpenIndex === index) {
+                this.closeProductDropdown();
+                return;
+            }
+
+            this.openProductDropdown(index);
+        },
+        openProductDropdown(index) {
+            this.closeCustomerDropdown();
+            this.productDropdownOpenIndex = index;
+            this.$nextTick(() => {
+                const searchInput = document.getElementById(this.productSearchInputId(index));
+                if (searchInput) searchInput.focus();
+            });
+        },
+        closeProductDropdown() {
+            this.productDropdownOpenIndex = null;
+        },
+        selectProductForSale(item, product) {
+            if (Number(product.current_stock) <= 0) {
+                return;
+            }
+
+            item.product_id = product.id;
+            item.product_search = '';
+            this.closeProductDropdown();
+        },
+        selectFirstAvailableProduct(item) {
+            const product = this.filteredProductsForSaleItem(item)
+                .find((row) => Number(row.current_stock) > 0);
+
+            if (product) {
+                this.selectProductForSale(item, product);
+            }
+        },
+        clearProductSelection(item) {
+            item.product_id = '';
+            item.product_search = '';
+        },
+        handleOutsideProductDropdown() {
+            if (this.productDropdownOpenIndex !== null) {
+                this.closeProductDropdown();
             }
         },
         syncPaymentAmount() {
@@ -1956,6 +2116,56 @@ export default {
     display: flex;
     flex-direction: column;
     gap: 6px;
+}
+
+.product-select-wrapper {
+    position: relative;
+    min-width: 0;
+}
+
+.product-select-wrapper .vselect-field {
+    width: 100%;
+}
+
+.product-select-menu {
+    width: min(420px, calc(100vw - 40px));
+    min-width: 280px;
+}
+
+.product-results {
+    max-height: 280px;
+}
+
+.product-result-option.disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.product-result-option.disabled:hover {
+    background: transparent;
+}
+
+.product-code-pill {
+    display: inline-flex;
+    align-items: center;
+    max-width: 120px;
+    margin-right: 6px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: #eef2ff;
+    color: #4338ca;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.5;
+    vertical-align: 1px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@media (max-width: 820px) {
+    .product-select-wrapper {
+        grid-area: product;
+    }
 }
 
 .vselect-field {
