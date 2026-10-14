@@ -158,15 +158,33 @@
                             <h4>No products in stock</h4>
                             <p>Add products from the Products tab to start tracking inventory.</p>
                         </div>
-                        <div v-else class="stock-list">
-                            <div v-for="product in dashboard.current_stock" :key="product.id" class="stock-row">
-                                <div>
-                                    <strong>{{ product.name }}</strong>
-                                    <span>{{ money(product.selling_price) }}</span>
+                        <div v-else>
+                            <div class="stock-list">
+                                <div v-for="product in paginatedCurrentStock" :key="product.id" class="stock-row">
+                                    <div>
+                                        <strong>{{ product.name }}</strong>
+                                        <span>{{ money(product.selling_price) }}</span>
+                                    </div>
+                                    <span :class="['stock-pill', stockLevel(product)]">
+                                        {{ product.current_stock }}
+                                    </span>
                                 </div>
-                                <span :class="['stock-pill', stockLevel(product)]">
-                                    {{ product.current_stock }}
+                            </div>
+                            <div v-if="currentStockTotalPages > 1" class="stock-pagination">
+                                <span class="stock-pagination-summary">
+                                    Showing {{ currentStockRangeStart }}-{{ currentStockRangeEnd }} of {{ currentStockItems.length }}
                                 </span>
+                                <div class="stock-pagination-actions">
+                                    <button class="btn btn-muted btn-small" type="button" :disabled="currentStockPage === 1" @click="previousCurrentStockPage">
+                                        Prev
+                                    </button>
+                                    <span class="stock-pagination-page">
+                                        Page {{ currentStockPage }} of {{ currentStockTotalPages }}
+                                    </span>
+                                    <button class="btn btn-muted btn-small" type="button" :disabled="currentStockPage === currentStockTotalPages" @click="nextCurrentStockPage">
+                                        Next
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </section>
@@ -1215,6 +1233,8 @@ export default {
             inventoryReport: [],
             salesHistory: [],
             creditDashboard: [],
+            currentStockPage: 1,
+            currentStockPerPage: 10,
             customerCreditDetail: null,
             savingCreditPayment: false,
             saleForm: this.emptySaleForm(),
@@ -1265,6 +1285,26 @@ export default {
         },
         activeProducts() {
             return this.products.filter((product) => product.status === 'Active');
+        },
+        currentStockItems() {
+            return Array.isArray(this.dashboard.current_stock) ? this.dashboard.current_stock : [];
+        },
+        currentStockTotalPages() {
+            return Math.max(1, Math.ceil(this.currentStockItems.length / this.currentStockPerPage));
+        },
+        paginatedCurrentStock() {
+            const start = (this.currentStockPage - 1) * this.currentStockPerPage;
+            return this.currentStockItems.slice(start, start + this.currentStockPerPage);
+        },
+        currentStockRangeStart() {
+            if (!this.currentStockItems.length) {
+                return 0;
+            }
+
+            return (this.currentStockPage - 1) * this.currentStockPerPage + 1;
+        },
+        currentStockRangeEnd() {
+            return Math.min(this.currentStockPage * this.currentStockPerPage, this.currentStockItems.length);
         },
         saleTotal() {
             return this.saleForm.items.reduce((total, item) => total + this.itemTotal(item), 0);
@@ -1420,6 +1460,19 @@ export default {
             this.errorMessage = '';
             this.errorDetails = [];
         },
+        goToCurrentStockPage(page) {
+            const nextPage = Math.min(Math.max(Number(page) || 1, 1), this.currentStockTotalPages);
+            this.currentStockPage = nextPage;
+        },
+        previousCurrentStockPage() {
+            this.goToCurrentStockPage(this.currentStockPage - 1);
+        },
+        nextCurrentStockPage() {
+            this.goToCurrentStockPage(this.currentStockPage + 1);
+        },
+        normalizeCurrentStockPage() {
+            this.goToCurrentStockPage(this.currentStockPage);
+        },
         selectTab(tabId) {
             this.activeTab = tabId;
             this.closeMobileSidebar();
@@ -1552,6 +1605,7 @@ export default {
         async loadDashboard() {
             const response = await window.axios.get('/api/dashboard/today');
             this.dashboard = response.data.data;
+            this.normalizeCurrentStockPage();
         },
         async loadCustomers() {
             const response = await window.axios.get('/api/customers');
@@ -2205,6 +2259,31 @@ export default {
 
 .panel-heading .eyebrow {
     margin-left: auto;
+}
+
+.stock-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #e5e7eb;
+    flex-wrap: wrap;
+}
+
+.stock-pagination-summary,
+.stock-pagination-page {
+    color: #6b7280;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.stock-pagination-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
 @keyframes fadeIn {
