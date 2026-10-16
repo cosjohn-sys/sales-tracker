@@ -813,10 +813,14 @@
                             </select>
                         </label>
                     </div>
-                    <div class="actions">
+                    <div class="actions history-filter-actions">
                         <button class="btn btn-primary" type="submit">
                             <span aria-hidden="true">🔍</span> Apply Filters
                         </button>
+                        <div class="history-grand-total" role="status">
+                            <span>Grand Total Sales</span>
+                            <strong>{{ money(historyGrandTotal) }}</strong>
+                        </div>
                     </div>
                 </form>
 
@@ -1290,6 +1294,7 @@ export default {
             trends: {},
             inventoryReport: [],
             salesHistory: [],
+            historyGrandTotal: 0,
             creditDashboard: [],
             currentStockPage: 1,
             currentStockPerPage: 10,
@@ -1699,6 +1704,7 @@ export default {
 
             const response = await window.axios.get('/api/sales', { params });
             this.salesHistory = response.data.data;
+            this.historyGrandTotal = response.data.grand_total;
         },
         async saveSale() {
             this.savingSale = true;
@@ -2469,6 +2475,29 @@ export default {
 
 .panel-heading .eyebrow {
     margin-left: auto;
+}
+
+.history-filter-actions {
+    align-items: center;
+}
+
+.history-grand-total {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 14px;
+    border: 1px solid var(--color-primary-200);
+    border-radius: var(--radius-md);
+    background: var(--color-primary-50);
+    color: var(--color-text-secondary);
+    font-size: 13px;
+}
+
+.history-grand-total strong {
+    color: var(--color-primary-dark);
+    font-size: 20px;
+    font-variant-numeric: tabular-nums;
 }
 
 .stock-pagination {

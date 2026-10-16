@@ -44,7 +44,13 @@ class SaleController extends Controller
 
         $this->applyFilters($query, $request);
 
-        return new JsonResponse(['data' => $query->limit(250)->get()]);
+        $grandTotal = (float) (clone $query)->sum('sale_items.total');
+
+        return new JsonResponse([
+            // 'data' => $query->limit(250)->get(),
+            'data' => $query->get(),
+            'grand_total' => $grandTotal,
+        ]);
     }
 
     public function show(int $id): JsonResponse
